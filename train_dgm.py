@@ -68,7 +68,7 @@ if __name__ == "__main__":
     
     
     # Enter main function
-    import trainer_dgm2 as trainer
+    import trainer_dgm as trainer
     if opt.gan_type == 'WGAN':
         trainer.WGAN_trainer(opt)
     

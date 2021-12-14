@@ -55,9 +55,6 @@ def WGAN_tester(opt):
     # ----------------------------------------
     # Testing loop
     
-    sum_psnr = 0
-    sum_ssim = 0
-    sum_l1 = 0
     for batch_idx, (img, mask) in enumerate(dataloader):
         img = img.cuda()
         mask = mask.cuda()
@@ -75,16 +72,4 @@ def WGAN_tester(opt):
         img_list = [second_out_wholeimg]
         name_list = ['second_out']
         utils.save_sample_png(sample_folder = opt.results_path, sample_name = '%d' % (batch_idx + 1), img_list = img_list, name_list = name_list, pixel_max_cnt = 255)
-        
-        psnr_value = utils.psnr(second_out_wholeimg, img)
-        ssim_value = utils.ssim(second_out_wholeimg, img)
-        l1_value = utils.l1_loss(second_out_wholeimg, img)
-        
-        sum_psnr += psnr_value
-        sum_ssim += ssim_value
-        sum_l1 += l1_value
-        
-        print('PSNR:', psnr_value, 'SSIM:', ssim_value, 'L1_Loss:', l1_value)
-        print('----------------------batch_idx%d' % (batch_idx + 1) + ' has been finished----------------------')
-    print('Avg PSNR', sum_psnr/300, 'Avg SSIM', sum_ssim/300, 'Avg L1_Loss', sum_l1/300)
     

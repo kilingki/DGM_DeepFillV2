@@ -30,18 +30,17 @@ def WGAN_trainer(opt):
 
     # Build networks
     generator = utils_dgm.create_generator(opt)
-    #patch_discriminator = utils_dgm.create_patch_discriminator(opt)
+    patch_discriminator = utils_dgm.create_patch_discriminator(opt)
     maskaware_discriminator = utils_dgm.create_maskaware_discriminator(opt)
     perceptualnet = utils_dgm.create_perceptualnet()
 
     # Loss functions
     L1Loss = nn.L1Loss()
     MSELoss = nn.MSELoss()
-    BCELoss = nn.BCELoss()
     
     # Optimizers
     optimizer_g = torch.optim.Adam(generator.parameters(), lr = opt.lr_g, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
-    #optimizer_pd = torch.optim.Adam(patch_discriminator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
+    optimizer_pd = torch.optim.Adam(patch_discriminator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
     optimizer_md = torch.optim.Adam(maskaware_discriminator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
 
     # Learning rate decrease
@@ -107,17 +106,17 @@ def WGAN_trainer(opt):
     # To device
     if opt.multi_gpu == True:
         generator = nn.DataParallel(generator)
-        #patch_discriminator = nn.DataParallel(patch_discriminator)
+        patch_discriminator = nn.DataParallel(patch_discriminator)
         maskaware_discriminator = nn.DataParallel(maskaware_discriminator)
         perceptualnet = nn.DataParallel(perceptualnet)
         
         generator = generator.cuda()
-        #patch_discriminator = patch_discriminator.cuda()
+        patch_discriminator = patch_discriminator.cuda()
         maskaware_discriminator = maskaware_discriminator.cuda()
         perceptualnet = perceptualnet.cuda()
     else:
         generator = generator.cuda()
-        #patch_discriminator = patch_discriminator.cuda()
+        patch_discriminator = patch_discriminator.cuda()
         maskaware_discriminator = maskaware_discriminator.cuda()
         perceptualnet = perceptualnet.cuda()
     
@@ -160,10 +159,10 @@ def WGAN_trainer(opt):
             zero = Tensor(np.zeros((img.shape[0], 1, height[0]//32, width[0]//32)))
 
             
-            '''###########################################################################
+            ###########################################################################
             ### Train Patch Discriminator #############################################
             ###########################################################################
-            optimizer_pd.zero_grad()'''
+            optimizer_pd.zero_grad()
 
             # Generator output
             first_out, second_out = generator(img, mask) # coarse(1st) / refine(2nd)
@@ -172,7 +171,7 @@ def WGAN_trainer(opt):
             first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [0, 1]
             second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [0, 1]
 
-            '''# Fake samples
+            # Fake samples
             fake_scalar = patch_discriminator(second_out_wholeimg.detach(), mask)
             # True samples
             true_scalar = patch_discriminator(img, mask)
@@ -183,7 +182,7 @@ def WGAN_trainer(opt):
             # Overall Loss and optimize
             loss_pD = 0.5 * (loss_fake + loss_true)
             loss_pD.backward()
-            optimizer_pd.step()'''
+            optimizer_pd.step()
             
             ###########################################################################
             ### Train Mask-aware Discriminator ########################################
@@ -195,9 +194,10 @@ def WGAN_trainer(opt):
             # True samples
             true_scalar = maskaware_discriminator(img)
             
-            # Loss and optimize
-            loss_fake = BCELoss(fake_scalar, mask)
-            loss_true = BCELoss(true_scalar, Tensor(np.zeros(fake_scalar.shape)).detach())
+            
+            # LSGAN Loss for Mask-aware Discriminator
+            loss_fake = MSELoss(fake_scalar, mask)
+            loss_true = MSELoss(true_scalar, Tensor(np.zeros(fake_scalar.shape)).detach())
             
             # Overall Loss and optimize
             loss_mD = 0.5 * (loss_fake + loss_true)
@@ -213,9 +213,9 @@ def WGAN_trainer(opt):
             first_L1Loss = (first_out - img).abs().mean()
             second_L1Loss = (second_out - img).abs().mean()
             
-            '''# GAN Loss (Patch)
+            # GAN Loss (Patch)
             fake_scalar1 = patch_discriminator(second_out_wholeimg, mask)
-            GAN_Loss_Patch = -torch.mean(fake_scalar1)'''
+            GAN_Loss_Patch = -torch.mean(fake_scalar1)
             
             # GAN Loss (Mask-aware)
             fake_scalar2 = maskaware_discriminator(second_out_wholeimg)
@@ -230,9 +230,7 @@ def WGAN_trainer(opt):
             # Compute losses
             loss = opt.lambda_l1 * first_L1Loss + opt.lambda_l1 * second_L1Loss \
                     + opt.lambda_perceptual * second_PerceptualLoss \
-                    + opt.lambda_gan2 * GAN_Loss_Mask
-                    #+ opt.lambda_gan1 * GAN_Loss_Patch
-                    
+                    + opt.lambda_gan2 * GAN_Loss_Mask + opt.lambda_gan1 * GAN_Loss_Patch
                     
             loss.backward()
             optimizer_g.step()
@@ -242,10 +240,8 @@ def WGAN_trainer(opt):
                 print("\r[Epoch %d/%d] [Batch %d/%d] [first Mask L1 Loss: %.5f] [second Mask L1 Loss: %.5f]" %
                     ((epoch + 1), opt.epochs, batch_idx, len(dataloader), first_L1Loss.item(), second_L1Loss.item()))
 
-                #print("\r[pD Loss: %.5f] [mD Loss: %.5f] [G Loss_P: %.5f] [G Loss_M: %.5f] [P Loss: %.5f]" %
-                #    (loss_pD.item(), loss_mD.item(), GAN_Loss_Patch.item(), GAN_Loss_Mask.item(), second_PerceptualLoss.item()))
-                print("\r[mD Loss: %.5f] [G Loss_M: %.5f] [P Loss: %.5f]" %
-                    (loss_mD.item(), GAN_Loss_Mask.item(), second_PerceptualLoss.item()))
+                print("\r[pD Loss: %.5f] [mD Loss: %.5f] [G Loss_P: %.5f] [G Loss_M: %.5f] [P Loss: %.5f]" %
+                    (loss_pD.item(), loss_mD.item(), GAN_Loss_Patch.item(), GAN_Loss_Mask.item(), second_PerceptualLoss.item()))
                 print('100 batches take', time.time()-s_t)
                 s_t = time.time()
                 
@@ -258,12 +254,12 @@ def WGAN_trainer(opt):
 
         # Learning rate decrease
         adjust_learning_rate(opt.lr_g, optimizer_g, (epoch + 1), opt)
-        #adjust_learning_rate(opt.lr_d, optimizer_pd, (epoch + 1), opt)
+        adjust_learning_rate(opt.lr_d, optimizer_pd, (epoch + 1), opt)
         adjust_learning_rate(opt.lr_d, optimizer_md, (epoch + 1), opt)
         
         # Save the model
         save_model_generator(generator, (epoch + 1), opt)
-        #save_model_patch_discriminator(patch_discriminator, (epoch + 1), opt)
+        save_model_patch_discriminator(patch_discriminator, (epoch + 1), opt)
         save_model_maskaware_discriminator(maskaware_discriminator, (epoch + 1), opt)
         
         ### Sample data every epoch
