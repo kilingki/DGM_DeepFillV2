@@ -5,3 +5,4 @@ samples/*
 pretrained_model/*
 result_dgm/*
 dgm_dataset/*
+.nfs*
