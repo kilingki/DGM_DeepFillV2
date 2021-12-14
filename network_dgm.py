@@ -193,7 +193,7 @@ class MaskAwareDiscriminator(nn.Module):
                                         pad_type = opt.pad_type, activation = opt.activation, norm = opt.norm, sn = True, scale_factor = 2)
         
         self.same2 = Conv2dLayer(2*opt.latent_channels, 1, 3, 1, 1, 
-                                        pad_type = opt.pad_type, activation = 'sigmoid', norm = opt.norm, sn = True)
+                                        pad_type = opt.pad_type, activation = 'none', norm = opt.norm, sn = True)
                                         
     
     def forward(self, img):                         # img : [B, 3, 512, 512]
