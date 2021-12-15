@@ -108,10 +108,7 @@ class GatedGenerator(nn.Module):
     def forward(self, img, mask):
         # img: entire img
         # mask: 1 for mask region; 0 for unmask region
-
-        # mask_random: 랜덤 생성된 픽셀들을 마스크 부위에 적용합니다.
-        mask_random = torch.rand(mask.shape).cuda() * mask
-        first_masked_img = img * (1 - mask) + mask_random
+        first_masked_img = img * (1 - mask) + mask
         
         # Coarse
         first_in = torch.cat((first_masked_img, mask_random), dim=1)       # in: [B, 4, H, W]
