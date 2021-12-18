@@ -3,6 +3,13 @@ import torch.nn as nn
 import torch.nn.init as init
 import torchvision
 
+# added
+import cv2
+import numpy as np
+from scipy import spatial
+from os import listdir
+
+from mini_generator import *
 from network_module import *
 
 def weights_init(net, init_type = 'kaiming', init_gain = 0.02):
@@ -105,13 +112,18 @@ class GatedGenerator(nn.Module):
                                                      fuse=True)
 
         
-    def forward(self, img, mask):
+    def forward(self, img, mask, adder_n = 1):
         # img: entire img
         # mask: 1 for mask region; 0 for unmask region
-        first_masked_img = img * (1 - mask) + mask
+        # 'random': 랜덤 생성된 픽셀들을 마스크 부위에 적용합니다.
+
+        # Noise Adder
+        adder_f = ['basic', 'random', 'overlap', 'smodel1_1', 'smodel1_2', 'smodel2']
+        mask_noise = self.mask_noise_add(mask, img, adder_f[adder_n])
+        first_masked_img = img * (1 - mask) + mask_noise
         
         # Coarse
-        first_in = torch.cat((first_masked_img, mask_random), dim=1)       # in: [B, 4, H, W]
+        first_in = torch.cat((first_masked_img, mask_noise), dim=1)       # in: [B, 4, H, W]
         first_out = self.coarse(first_in)                           # out: [B, 3, H, W]
         first_out = nn.functional.interpolate(first_out, (img.shape[2], img.shape[3]))
         
@@ -131,6 +143,50 @@ class GatedGenerator(nn.Module):
         second_out = nn.functional.interpolate(second_out, (img.shape[2], img.shape[3]))
         
         return first_out, second_out
+    
+    def mask_noise_add(self, mask, img, adder_f):
+
+        if adder_f == 'random': # take random mask
+            m_noise = torch.rand(mask.shape).cuda()
+
+        elif adder_f == 'overlap': # cosine similarity (least) -1 ~ 1 (most)
+            Tensor = torch.cuda.FloatTensor
+            trainlen = len(listdir('dgm_dataset'))
+            sim_list = []
+            for i in range(0, trainlen, int(trainlen/100)):
+                sim_img = cv2.imread('dgm_dataset/'+str(i)+'.png') 
+                #img_arr = img.numpy()
+                #sim_arr = np.array(sim_img)
+                cos_sim = 1 - spatial.distance.cosine(img, sim_img)
+                sim_list.append(cos_sim)
+            sim_num = sim_list.index(max(sim_list))
+            last_img = cv2.imread('dgm_dataset/'+str(sim_num*(int(trainlen/100)))+'.png') 
+            m_noise = Variable(last_img.type(Tensor))
+        
+        elif adder_f == 'smodel1_1': #blurr edges as average
+            Tensor = torch.cuda.FloatTensor
+            kernel = np.ones((5,5),np.float32)/25
+            img_out = cv2.filter2D(img, -1, kernel)
+            m_noise = Variable(img_out.type(Tensor))
+
+        elif adder_f == 'smodel1_2': #blurr edges as 1d guassian of upper line
+            img_arr = img.numpy()
+            x_idx = img.shape[0]
+            y_idx = img.sahpe[1]
+            gauss1d = np.array([1, 4, 6, 4, 1])/16
+            for i in range(x_idx-1):
+                for j in range(2, y_idx-2):
+                    img_arr[i, j+1] = (img_arr[i-2:i+2, j] * gauss1d).sum()
+            m_noise = torch.from_numpy(img_arr, 'RGB')
+
+        elif adder_f == 'smodel2': # background distribution by using mini-generator
+            mini_model = MiniModel()
+            m_noise = mini_model.test(img)
+
+        else: # not mask = ones
+            m_noise = torch.ones(mask.shape).cuda() 
+
+        return m_noise * mask
 
 #-----------------------------------------------
 #                  Discriminator
@@ -190,7 +246,7 @@ class MaskAwareDiscriminator(nn.Module):
                                         pad_type = opt.pad_type, activation = opt.activation, norm = opt.norm, sn = True, scale_factor = 2)
         
         self.same2 = Conv2dLayer(2*opt.latent_channels, 1, 3, 1, 1, 
-                                        pad_type = opt.pad_type, activation = 'none', norm = opt.norm, sn = True)
+                                        pad_type = opt.pad_type, activation = 'sigmoid', norm = opt.norm, sn = True)
                                         
     
     def forward(self, img):                         # img : [B, 3, 512, 512]
