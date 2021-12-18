@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 import torch
-import imgcrop
+# import imgcrop
 import random
 import math
 from PIL import Image, ImageDraw
