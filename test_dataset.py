@@ -39,3 +39,4 @@ class InpaintDataset(Dataset):
         img = torch.from_numpy(img.astype(np.float32) / 255.0).permute(2, 0, 1).contiguous()
         mask = torch.from_numpy(mask.astype(np.float32) / 255.0).unsqueeze(0).contiguous()
         return img, mask
+        
