@@ -21,13 +21,14 @@ Note that 2 folders contain the image and its corresponding mask respectively.
 Testing dataset is downloaded from DGM Class.
 
 ## Training
+* Locate your pretrained 'mini_model.pth' here.
 * To train a model:
 ``` bash
 $ bash ./run_train.sh
 ``` 
 All training models and sample images will be saved in `./models/` and `./samples/` respectively.
 ## Testing
-Get trained generator pth file and put it in `./pretrained_model/`.
+Get trained generator pth file and put it in `.models/pretrained_model/`.
 * To test a model:
 ``` bash
 $ bash ./run_test.sh
