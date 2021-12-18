@@ -72,4 +72,4 @@ def WGAN_tester(opt):
         img_list = [second_out_wholeimg]
         name_list = ['second_out']
         utils.save_sample_png(sample_folder = opt.results_path, sample_name = '%d' % (batch_idx + 1), img_list = img_list, name_list = name_list, pixel_max_cnt = 255)
-    
+        
