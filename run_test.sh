@@ -16,7 +16,7 @@
 --baseroot_mask './dgm_masks/' \
 --results_path './results_dgm' \
 --gan_type 'WGAN' \
---gpu_ids '6' \
+--gpu_ids '0' \
 --epoch 40 \
 --batch_size 1 \
 --num_workers 8 \
