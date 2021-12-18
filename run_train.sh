@@ -2,26 +2,28 @@ python train_dgm.py \
 --baseroot './dgm_dataset' \
 --save_path './models' \
 --sample_path './samples' \
---gpu_ids '4,5,6,7' \
+--gpu_ids '0,1,2,3' \
 --gan_type 'WGAN' \
 --cudnn_benchmark True \
 --checkpoint_interval 5 \
 --multi_gpu True \
 --load_name '' \
 --epochs 40 \
---batch_size 4 \
+--batch_size 8 \
 --lr_g 1e-4 \
 --lr_d 1e-4 \
 --lambda_l1 10 \
 --lambda_perceptual 10 \
 --lambda_gan1 1 \
 --lambda_gan2 1 \
+--resume \
+--resume_epoch 40 \
 --lr_decrease_epoch 10 \
 --lr_decrease_factor 0.5 \
---num_workers 4 \
+--num_workers 8 \
 --in_channels 4 \
 --out_channels 3 \
---latent_channels 48 \
+--latent_channels 64 \
 --pad_type 'zero' \
 --activation 'elu' \
 --norm 'none' \
@@ -34,4 +36,4 @@ python train_dgm.py \
 --bbox_shape 30 \
 --max_angle 4 \
 --max_len 40 \
---max_width 10 \
+--max_width 10 
