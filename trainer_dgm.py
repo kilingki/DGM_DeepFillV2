@@ -92,17 +92,22 @@ def WGAN_trainer(opt):
                 torch.save(net.state_dict(), model_name)
                 print('The trained mD model is successfully saved at epoch %d' % (epoch))
     
-    '''# load the model
     def load_model(net, epoch, opt, type='G'):
         """Save the model at "checkpoint_interval" and its multiple"""
         if type == 'G':
-            model_name = 'deepfillv2_WGAN_G_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size)
+            model_name = 'pretrained_model/' +'deepfillv2_WGAN_G_epoch%d_batchsize%d.pth' % (epoch, 16)
         else:
-            model_name = 'deepfillv2_WGAN_D_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size)
+            model_name = 'pretrained_model/' + 'deepfillv2_WGAN_D_epoch%d_batchsize%d.pth' % (epoch, 16)
         model_name = os.path.join(save_folder, model_name)
         pretrained_dict = torch.load(model_name)
-        net.load_state_dict(pretrained_dict)'''
+        net.load_state_dict(pretrained_dict)
     
+    if opt.resume:
+        load_model(generator, opt.resume_epoch, opt, type='G')
+        load_model(patch_discriminator, opt.resume_epoch, opt, type='D')
+        print('--------------------Pretrained Models are Loaded--------------------')
+        
+
     # To device
     if opt.multi_gpu == True:
         generator = nn.DataParallel(generator)
@@ -141,6 +146,9 @@ def WGAN_trainer(opt):
     # Tensor type
     Tensor = torch.cuda.FloatTensor
 
+    print("resume_epoch == ",opt.resume_epoch)
+    opt.resume_epoch = 0
+    
     # Training loop
     for epoch in range(opt.resume_epoch, opt.epochs):
         s_t = time.time()
@@ -219,9 +227,8 @@ def WGAN_trainer(opt):
             
             # GAN Loss (Mask-aware)
             fake_scalar2 = maskaware_discriminator(second_out_wholeimg)
-            GAN_Loss_Mask = BCELoss(fake_scalar2, mask)
-            
-            
+            GAN_Loss_Mask = MSELoss(fake_scalar2, mask)
+                    
             # Get the deep semantic feature maps, and compute Perceptual Loss
             img_featuremaps = perceptualnet(img)    # feature maps
             second_out_featuremaps = perceptualnet(second_out)
