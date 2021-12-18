@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # Network parameters
     parser.add_argument('--in_channels', type = int, default = 4, help = 'input RGB image + 1 channel mask')
     parser.add_argument('--out_channels', type = int, default = 3, help = 'output RGB image')
-    parser.add_argument('--latent_channels', type = int, default = 48, help = 'latent channels')
+    parser.add_argument('--latent_channels', type = int, default = 64, help = 'latent channels')
     parser.add_argument('--pad_type', type = str, default = 'zero', help = 'the padding type')
     parser.add_argument('--activation', type = str, default = 'lrelu', help = 'the activation type')
     parser.add_argument('--norm', type = str, default = 'in', help = 'normalization type')
