@@ -1,6 +1,6 @@
 ## DeepFillv2_Pytorch
 This is a Pytorch re-implementation for the paper [Free-Form Image Inpainting with Gated Convolution](https://arxiv.org/abs/1806.03589).  
-This is a Team Project Codes for DGM/ACV Class.
+This is a Team Project Codes for DGM/ACV Class of UNIST AIGS.
 
 This repository contains "Gated Convolution", "Contextual Attention" and "Spectral Normalization".
 ## Requirement
